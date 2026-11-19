@@ -1,0 +1,166 @@
+.detail-body {
+  margin-top: 16px;
+  padding: 22px;
+  background: #fff;
+  border-radius: 14px;
+}
+
+.detail-body h3 {
+  margin: 6px 0 18px;
+  font: 700 28px/1.15 Georgia, serif;
+}
+
+.recipe-card-open:focus-visible {
+  outline: 3px solid #3d4a31;
+  outline-offset: -3px;
+}
+
+.card-actions .cook-button {
+  background: #d1e7dd;
+  color: #0f5132;
+}
+
+.api-error {
+  position: fixed;
+  z-index: 100;
+  top: 16px;
+  left: 50%;
+  max-width: min(560px, calc(100% - 32px));
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border: 1px solid #e8c5c0;
+  border-radius: 10px;
+  background: #fff5f3;
+  color: #8d3f37;
+  box-shadow: 0 8px 24px rgba(37, 40, 32, .12);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.recipe-steps {
+  margin-top: 22px;
+}
+
+.recipe-steps h4 {
+  margin: 0 0 12px;
+  color: #252820;
+  font: 700 20px Georgia, serif;
+}
+
+.recipe-steps ol {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: #5f6457;
+  line-height: 1.5;
+}
+
+.recipe-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+}
+
+.recipe-step-number {
+  color: #3d4a31;
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #eceee6;
+}
+
+.actions button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #3d4a31;
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    transform 0.18s ease;
+}
+
+.actions button:first-child:hover {
+  background: #526342;
+  transform: translateY(-1px);
+}
+
+.actions .delete-button {
+  background: #f7eae7;
+  color: #9a4b43;
+}
+
+.actions .delete-button:hover {
+  background: #f2dcd7;
+  transform: translateY(-1px);
+}
+
+.actions .save-button {
+  position: static;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: 1px solid #eceee6;
+  border-radius: 9px;
+  background: #f7f5ef;
+  color: #777a70;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.actions .save-button:hover {
+  background: #eeece4;
+}
+
+.actions .save-button.saved {
+  border-color: #f5d5d2;
+  background: #fce9e8;
+  color: #d45e55;
+}
+
+.actions button:focus-visible {
+  outline: 3px solid #b8ca78;
+  outline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .modal-content {
+    padding: 16px;
+  }
+
+  .detail-body {
+    padding: 18px;
+  }
+
+  .actions {
+    gap: 8px;
+  }
+
+  .actions button {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .actions .save-button {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+  }
+}

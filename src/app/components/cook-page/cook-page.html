@@ -1,0 +1,42 @@
+<main class="cook-page">
+  <header class="cook-header">
+    <a class="brand" href="#" (click)="$event.preventDefault(); finish()" aria-label="Return to recipes">
+      <span class="brand-mark">C</span><span>Cook</span>
+    </a>
+    <button class="exit-button" type="button" (click)="finish()">Back to recipes</button>
+  </header>
+
+  <section class="cook-content" aria-labelledby="cook-title">
+    <p class="eyebrow">Cooking mode</p>
+    <h1 id="cook-title">{{ recipe().title }}</h1>
+    <p class="step-count">Step {{ currentStepIndex() + 1 }} of {{ totalSteps() }}</p>
+    <div
+      class="progress-track"
+      role="progressbar"
+      [attr.aria-valuenow]="currentStepIndex() + 1"
+      [attr.aria-valuemin]="1"
+      [attr.aria-valuemax]="totalSteps()"
+      [attr.aria-label]="'Step ' + (currentStepIndex() + 1) + ' of ' + totalSteps()"
+    >
+      <span [style.width.%]="progress()"></span>
+    </div>
+
+    @if (totalSteps() > 0) {
+      <article class="instruction-card" aria-live="polite">
+        <span class="step-number">{{ currentStepIndex() + 1 }}.</span>
+        <p>{{ recipe().steps[currentStepIndex()] }}</p>
+      </article>
+      <nav class="step-navigation" aria-label="Cooking steps">
+        <button class="previous-button" type="button" (click)="previousStep()" [disabled]="currentStepIndex() === 0">Previous</button>
+        @if (currentStepIndex() < totalSteps() - 1) {
+          <button class="next-button" type="button" (click)="nextStep()">Next step</button>
+        } @else {
+          <button class="next-button" type="button" (click)="finish()">Finish cooking</button>
+        }
+      </nav>
+    } @else {
+      <p class="no-steps">This recipe does not have any steps yet.</p>
+      <button class="next-button" type="button" (click)="finish()">Back to recipes</button>
+    }
+  </section>
+</main>

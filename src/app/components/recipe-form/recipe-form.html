@@ -1,0 +1,78 @@
+<section class="dialog-backdrop" role="presentation" (click)="close()">
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="recipe-form-title" (click)="$event.stopPropagation()">
+    <header>
+      <div>
+        <p>{{ recipe() ? 'Update your kitchen favorite' : 'Add something delicious' }}</p>
+        <h2 id="recipe-form-title">{{ recipe() ? 'Edit recipe' : 'New recipe' }}</h2>
+      </div>
+      <button class="close-button" type="button" aria-label="Close recipe form" (click)="close()">×</button>
+    </header>
+
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <label>
+        Recipe name
+        <input type="text" formControlName="title" placeholder="e.g. Lemon herb chicken" />
+        @if (form.controls.title.touched && form.controls.title.invalid) {
+          <small>Enter a recipe name.</small>
+        }
+      </label>
+
+      <div class="form-row">
+        <label>
+          Category
+          <select formControlName="category">
+            <option>Breakfast</option>
+            <option>Lunch</option>
+            <option>Dinner</option>
+            <option>Dessert</option>
+          </select>
+        </label>
+        <label>
+          Time (minutes)
+          <input type="number" formControlName="time" min="1" max="999" />
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          Rating
+          <input type="number" formControlName="rating" min="1" max="5" step="0.1" />
+        </label>
+        <label>
+          Image URL
+          <input type="url" formControlName="image" placeholder="https://..." />
+        </label>
+      </div>
+
+      <section class="steps-section" aria-labelledby="steps-title">
+        <div class="steps-heading">
+          <div>
+            <h3 id="steps-title">Method</h3>
+            <p>Add the instructions in the order they should be followed.</p>
+          </div>
+          <button class="add-step-button" type="button" (click)="addStep()">+ Add step</button>
+        </div>
+        <div formArrayName="steps" class="steps-list">
+          @for (step of steps.controls; track $index; let index = $index) {
+            <div class="step-row">
+              <span class="step-number">{{ index + 1 }}.</span>
+              <label class="sr-only" [for]="'recipe-step-' + index">Step {{ index + 1 }}</label>
+              <textarea [id]="'recipe-step-' + index" [formControlName]="index" placeholder="Describe this step..."></textarea>
+              @if (steps.length > 1) {
+                <button class="remove-step-button" type="button" [attr.aria-label]="'Remove step ' + (index + 1)" (click)="removeStep(index)">×</button>
+              }
+            </div>
+            @if (step.touched && step.invalid) {
+              <small>Enter an instruction for this step.</small>
+            }
+          }
+        </div>
+      </section>
+
+      <footer>
+        <button class="secondary-button" type="button" (click)="close()">Cancel</button>
+        <button class="primary-button" type="submit">{{ recipe() ? 'Save changes' : 'Create recipe' }}</button>
+      </footer>
+    </form>
+  </div>
+</section>

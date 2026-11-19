@@ -1,0 +1,161 @@
+:host {
+  display: block;
+}
+
+.cook-page {
+  min-height: 100vh;
+  background: #f7f5ef;
+  color: #252820;
+}
+
+.cook-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1000px;
+  height: 82px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #252820;
+  font: 700 23px Georgia, serif;
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: #b8ca78;
+  color: white;
+}
+
+.exit-button,
+.previous-button,
+.next-button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 9px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.exit-button,
+.previous-button {
+  background: #edf0e5;
+  color: #3d4a31;
+}
+
+.cook-content {
+  width: min(680px, calc(100% - 32px));
+  margin: 56px auto;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: #79864e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+h1 {
+  margin: 0;
+  font: 700 clamp(32px, 6vw, 48px)/1.1 Georgia, serif;
+}
+
+.step-count {
+  margin: 32px 0 10px;
+  color: #777b70;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e4e6dc;
+}
+
+.progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #79864e;
+  transition: width 180ms ease;
+}
+
+.instruction-card {
+  display: flex;
+  min-height: 260px;
+  align-items: flex-start;
+  gap: 18px;
+  margin-top: 24px;
+  padding: clamp(24px, 6vw, 48px);
+  border: 1px solid #eceee6;
+  border-radius: 18px;
+  background: white;
+  box-shadow: 0 12px 36px rgba(37, 40, 32, .06);
+}
+
+.step-number {
+  color: #79864e;
+  font: 700 24px Georgia, serif;
+}
+
+.instruction-card p {
+  margin: 0;
+  font: 500 clamp(20px, 3.5vw, 28px)/1.5 Georgia, serif;
+}
+
+.step-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.previous-button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.next-button {
+  background: #3d4a31;
+  color: white;
+}
+
+.no-steps {
+  margin: 24px 0;
+  color: #777b70;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #b8ca78;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .cook-header {
+    padding: 0 16px;
+  }
+
+  .cook-content {
+    margin: 32px auto;
+  }
+
+  .instruction-card {
+    min-height: 220px;
+  }
+}

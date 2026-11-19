@@ -2,15 +2,20 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.0.
 
-## Development server
+## Development server and API
 
-To start a local development server, run:
+The app uses a local Node.js API backed by SQLite to save recipes, their steps, collections, and each collection's selected recipes. Node.js 22.5 or later is required.
+
+Install dependencies and start both the API and Angular app with:
 
 ```bash
-ng serve
+npm install
+npm start
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Open `http://localhost:4200/`. Recipe and collection data is stored in `data/recipes.sqlite` and survives app restarts. The database is created and seeded with sample recipes and starter collections the first time the API starts.
+
+To run the API by itself, use `npm run server`. The API listens on `http://127.0.0.1:3000/`; Angular proxies `/api` requests to it during development.
 
 ## Code scaffolding
 
@@ -36,12 +41,18 @@ ng build
 
 This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
-## Running unit tests
+## Running tests
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+Run the Angular unit tests with the [Vitest](https://vitest.dev/) test runner:
 
 ```bash
-ng test
+npm test
+```
+
+Run API integration tests with:
+
+```bash
+npm run test:server
 ```
 
 ## Running end-to-end tests
