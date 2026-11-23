@@ -1,0 +1,54 @@
+<section class="recipe-comments" aria-labelledby="comments-title">
+  <div class="comments-heading">
+    <h4 id="comments-title">Cooking experiences</h4>
+    <span>{{ comments().length }}</span>
+  </div>
+
+  @if (authService.user(); as user) {
+    <form class="comment-form" (submit)="submitComment($event)">
+      <label for="experience">Share your experience, {{ user.name }}</label>
+      <textarea
+        id="experience"
+        maxlength="2000"
+        required
+        placeholder="What did you try? Any tips or changes?"
+        [value]="commentBody()"
+        (input)="updateCommentBody($event)"
+      ></textarea>
+      @if (formError(); as error) {
+        <p class="comment-error" role="alert">{{ error }}</p>
+        @if (error.includes('Sign in again')) {
+          <button class="comment-login-link" type="button" (click)="requestLogin()">Sign in</button>
+        }
+      }
+      <button class="comment-submit" type="submit" [disabled]="submitting() || !commentBody().trim()">
+        {{ submitting() ? 'Sharing…' : 'Share experience' }}
+      </button>
+    </form>
+  } @else {
+    <div class="comment-signin">
+      <p>Have you made this recipe? Sign in to share your experience with other cooks.</p>
+      <button type="button" (click)="requestLogin()">Log in or sign up</button>
+    </div>
+  }
+
+  @if (loading()) {
+    <p class="comments-message" role="status">Loading experiences…</p>
+  } @else if (loadError(); as error) {
+    <p class="comment-error" role="alert">{{ error }}</p>
+  } @else {
+    <div class="comment-list">
+      @for (comment of comments(); track comment.id) {
+        <article class="comment">
+          <div class="comment-meta">
+            <strong>{{ comment.author }}</strong>
+            <time [attr.datetime]="comment.createdAt">{{ formatDate(comment.createdAt) }}</time>
+          </div>
+          <p>{{ comment.body }}</p>
+        </article>
+      } @empty {
+        <p class="comments-message">No experiences yet. Be the first to share one.</p>
+      }
+    </div>
+  }
+</section>

@@ -4,7 +4,7 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 ## Development server and API
 
-The app uses a local Node.js API backed by SQLite to save recipes, their steps, collections, and each collection's selected recipes. Node.js 22.5 or later is required.
+The app uses a local Node.js API backed by SQLite to save recipes, their steps, collections, user accounts, and recipe experiences. Node.js 22.5 or later is required.
 
 Install dependencies and start both the API and Angular app with:
 
@@ -18,6 +18,20 @@ Open `http://localhost:4200/`. Recipe and collection data is stored in `data/rec
 To run the API by itself, use `npm run server`. The API listens on `http://127.0.0.1:3000/`; Angular proxies `/api` requests to it during development.
 
 Search TheMealDB's free recipe catalog through `GET /api/inspiration?q=chicken`. The endpoint accepts search terms up to 80 characters and returns matching recipes with ingredients, instructions, and source links. It does not require an API key.
+
+## Accounts and recipe experiences
+
+Visitors can create an account with a display name, email, and password, then sign in to share cooking experiences on each recipe. Passwords are stored as scrypt hashes, and sign-in uses an HTTP-only session cookie. Self-service registration is enabled.
+
+## Running with Docker Compose
+
+Build and start the full application with Docker Compose:
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:8080/`. To change the host port, set `APP_PORT` in a `.env` file beside `compose.yaml` (for example, `APP_PORT=9000`). The API is available to the frontend through the internal Docker network, and SQLite data is stored in the `recipe-data` named volume so it survives container recreation. Set `COOKIE_SECURE=true` in `.env` when serving the app over HTTPS; the default is intended for local HTTP. To stop the containers, run `docker compose down`; to also delete the stored database, run `docker compose down -v`.
 
 ## Code scaffolding
 

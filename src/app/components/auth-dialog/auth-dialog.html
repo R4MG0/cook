@@ -1,0 +1,71 @@
+<div class="auth-backdrop" role="presentation" (click)="close()">
+  <section
+    class="auth-dialog"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="auth-title"
+    (click)="$event.stopPropagation()"
+  >
+    <button class="auth-close" type="button" aria-label="Close sign-in dialog" (click)="close()">×</button>
+    <p class="auth-eyebrow">A kitchen shared</p>
+    <h2 id="auth-title">{{ mode() === 'login' ? 'Welcome back' : 'Join the table' }}</h2>
+    <p class="auth-intro">
+      {{ mode() === 'login' ? 'Sign in to share your cooking experiences.' : 'Create an account to leave recipe notes.' }}
+    </p>
+
+    <div class="auth-mode" role="group" aria-label="Account action">
+      <button type="button" [class.active]="mode() === 'login'" (click)="setMode('login')">Log in</button>
+      <button type="button" [class.active]="mode() === 'register'" (click)="setMode('register')">Sign up</button>
+    </div>
+
+    <form (submit)="submit($event)">
+      @if (mode() === 'register') {
+        <label>
+          Display name
+          <input
+            type="text"
+            autocomplete="name"
+            maxlength="40"
+            required
+            [value]="name()"
+            (input)="updateName($event)"
+          />
+        </label>
+      }
+      <label>
+        Email
+        <input
+          type="email"
+          autocomplete="email"
+          maxlength="254"
+          required
+          [value]="email()"
+          (input)="updateEmail($event)"
+        />
+      </label>
+      <label>
+        Password
+        <input
+          type="password"
+          [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'"
+          [attr.minlength]="mode() === 'register' ? 10 : null"
+          maxlength="128"
+          required
+          [value]="password()"
+          (input)="updatePassword($event)"
+        />
+        @if (mode() === 'register') {
+          <small>Use at least 10 characters.</small>
+        }
+      </label>
+
+      @if (formError(); as error) {
+        <p class="auth-error" role="alert">{{ error }}</p>
+      }
+
+      <button class="auth-submit" type="submit" [disabled]="submitting()">
+        {{ submitting() ? 'Please wait…' : mode() === 'login' ? 'Log in' : 'Create account' }}
+      </button>
+    </form>
+  </section>
+</div>

@@ -2,10 +2,11 @@ const { createApiServer } = require('./api');
 const { createDatabase } = require('./database');
 
 const port = Number(process.env.PORT ?? 3000);
+const host = process.env.HOST ?? '127.0.0.1';
 const database = createDatabase();
 const server = createApiServer(database);
 
-server.listen(port, '127.0.0.1', () => {
+server.listen(port, host, () => {
   console.log(`Recipe API listening on http://127.0.0.1:${port}`);
 });
 

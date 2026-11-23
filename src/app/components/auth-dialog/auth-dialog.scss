@@ -1,0 +1,145 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+}
+
+.auth-backdrop {
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(26, 29, 23, .62);
+}
+
+.auth-dialog {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 34px;
+  border-radius: 18px;
+  background: #fff;
+  color: #252820;
+  box-shadow: 0 20px 70px rgba(0, 0, 0, .24);
+}
+
+.auth-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: #f2f1eb;
+  color: #3d4a31;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.auth-eyebrow {
+  margin: 0 0 9px;
+  color: #79864e;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  text-transform: uppercase;
+}
+
+.auth-dialog h2 {
+  margin: 0;
+  font: 700 32px Georgia, serif;
+}
+
+.auth-intro {
+  margin: 8px 0 22px;
+  color: #777b70;
+  line-height: 1.5;
+}
+
+.auth-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-bottom: 20px;
+  padding: 4px;
+  border-radius: 10px;
+  background: #f3f2ec;
+}
+
+.auth-mode button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #65695f;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.auth-mode button.active {
+  background: #fff;
+  color: #3d4a31;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, .08);
+}
+
+form {
+  display: grid;
+  gap: 15px;
+}
+
+label {
+  display: grid;
+  gap: 7px;
+  color: #42463d;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 12px;
+  border: 1px solid #dfe1d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #252820;
+  font: inherit;
+}
+
+input:focus-visible {
+  outline: 2px solid #79864e;
+  outline-offset: 1px;
+}
+
+small {
+  color: #777b70;
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.auth-error {
+  margin: 0;
+  color: #9a4b43;
+  font-size: 13px;
+}
+
+.auth-submit {
+  min-height: 48px;
+  margin-top: 3px;
+  border: 0;
+  border-radius: 9px;
+  background: #3d4a31;
+  color: white;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-submit:disabled {
+  cursor: wait;
+  opacity: .7;
+}
+
+@media (max-width: 480px) {
+  .auth-dialog {
+    padding: 28px 22px;
+  }
+}

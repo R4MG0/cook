@@ -35,6 +35,12 @@ const draft = {
   image: 'https://example.com/soup.jpg',
 };
 
+function sessionCookie(response) {
+  const setCookie = response.headers.get('set-cookie');
+  assert.ok(setCookie);
+  return setCookie.split(';')[0];
+}
+
 test('recipe API seeds, creates, updates, and deletes persisted recipes', async () => {
   await withApi(async (baseUrl) => {
     const initialResponse = await fetch(`${baseUrl}/api/recipes`);
@@ -75,6 +81,169 @@ test('recipe API rejects invalid recipe data', async () => {
     });
     assert.equal(response.status, 400);
     assert.match((await response.json()).error, /non-empty recipe step/);
+  });
+});
+
+test('accounts can register, log in, inspect, and end sessions', async () => {
+  await withApi(async (baseUrl) => {
+    const registration = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Jamie Cook',
+        email: 'Jamie@example.com',
+        password: 'a-secure-test-password',
+      }),
+    });
+    const registered = await registration.json();
+    assert.equal(registration.status, 201);
+    assert.deepEqual(Object.keys(registered.user).sort(), ['email', 'id', 'name']);
+    const cookie = sessionCookie(registration);
+    assert.match(registration.headers.get('set-cookie'), /HttpOnly/);
+    assert.match(registration.headers.get('set-cookie'), /SameSite=Lax/);
+
+    const session = await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { cookie },
+    });
+    assert.deepEqual(await session.json(), { user: registered.user });
+
+    const duplicate = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Another Jamie',
+        email: 'JAMIE@example.com',
+        password: 'another-secure-password',
+      }),
+    });
+    assert.equal(duplicate.status, 409);
+
+    const wrongPassword = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'jamie@example.com', password: 'incorrect-password' }),
+    });
+    assert.equal(wrongPassword.status, 401);
+
+    const login = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email: 'JAMIE@example.com', password: 'a-secure-test-password' }),
+    });
+    assert.equal(login.status, 200);
+    const loginCookie = sessionCookie(login);
+    assert.deepEqual(await (await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { cookie: loginCookie },
+    })).json(), { user: registered.user });
+
+    const logout = await fetch(`${baseUrl}/api/auth/logout`, {
+      method: 'POST',
+      headers: { cookie: loginCookie },
+    });
+    assert.equal(logout.status, 204);
+    assert.deepEqual(await (await fetch(`${baseUrl}/api/auth/me`, {
+      headers: { cookie: loginCookie },
+    })).json(), { user: null });
+  });
+});
+
+test('different signed-in users can share experiences on a recipe', async () => {
+  await withApi(async (baseUrl) => {
+    const unauthorized = await fetch(`${baseUrl}/api/recipes/1/comments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ body: 'I tried this at home.' }),
+    });
+    assert.equal(unauthorized.status, 401);
+
+    const firstRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Alex',
+        email: 'alex@example.com',
+        password: 'first-secure-password',
+      }),
+    });
+    const firstCookie = sessionCookie(firstRegistration);
+    const firstComment = await fetch(`${baseUrl}/api/recipes/1/comments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: firstCookie },
+      body: JSON.stringify({ body: 'I added extra lemon.', author: 'Not Alex' }),
+    });
+    assert.equal(firstComment.status, 201);
+    const firstCommentData = await firstComment.json();
+    assert.equal(firstCommentData.id, 1);
+    assert.equal(firstCommentData.body, 'I added extra lemon.');
+    assert.match(firstCommentData.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal(firstCommentData.author, 'Alex');
+
+    const secondRegistration = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Riley',
+        email: 'riley@example.com',
+        password: 'second-secure-password',
+      }),
+    });
+    const secondCookie = sessionCookie(secondRegistration);
+    const secondComment = await fetch(`${baseUrl}/api/recipes/1/comments`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', cookie: secondCookie },
+      body: JSON.stringify({ body: 'Great for meal prep.' }),
+    });
+    assert.equal(secondComment.status, 201);
+    assert.equal((await secondComment.json()).author, 'Riley');
+
+    const commentsResponse = await fetch(`${baseUrl}/api/recipes/1/comments`);
+    const comments = await commentsResponse.json();
+    assert.equal(commentsResponse.status, 200);
+    assert.deepEqual(comments.map(({ author, body }) => ({ author, body })), [
+      { author: 'Riley', body: 'Great for meal prep.' },
+      { author: 'Alex', body: 'I added extra lemon.' },
+    ]);
+    assert.equal('email' in comments[0], false);
+  });
+});
+
+test('account and comment inputs enforce their validation limits', async () => {
+  await withApi(async (baseUrl) => {
+    const invalidEmail = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Jamie', email: 'not-an-email', password: 'a-secure-password' }),
+    });
+    assert.equal(invalidEmail.status, 400);
+
+    const shortPassword = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name: 'Jamie', email: 'jamie@example.com', password: 'short' }),
+    });
+    assert.equal(shortPassword.status, 400);
+
+    const missingRecipe = await fetch(`${baseUrl}/api/recipes/999/comments`);
+    assert.equal(missingRecipe.status, 404);
+
+    const registration = await fetch(`${baseUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Jamie',
+        email: 'jamie@example.com',
+        password: 'a-secure-password',
+      }),
+    });
+    const cookie = sessionCookie(registration);
+    for (const body of ['   ', 'x'.repeat(2001)]) {
+      const response = await fetch(`${baseUrl}/api/recipes/1/comments`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', cookie },
+        body: JSON.stringify({ body }),
+      });
+      assert.equal(response.status, 400);
+    }
   });
 });
 

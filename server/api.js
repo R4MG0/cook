@@ -1,5 +1,14 @@
 const { createServer } = require('node:http');
 const {
+  clearSessionCookie,
+  createSession,
+  destroySession,
+  getSessionUser,
+  hashPassword,
+  setSessionCookie,
+  verifyPassword,
+} = require('./auth');
+const {
   getCollections,
   replaceCollectionRecipes,
   toRecipe,
@@ -91,6 +100,54 @@ function validateDraft(value) {
   }
 
   return { title, category, time, rating, steps, image, accent: accents[category] };
+}
+
+function validateRegistration(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new RequestError(400, 'Account data must be an object.');
+  }
+
+  const name = typeof value.name === 'string' ? value.name.trim() : '';
+  const email = typeof value.email === 'string' ? value.email.trim().toLowerCase() : '';
+  const password = typeof value.password === 'string' ? value.password : '';
+
+  if (!name || name.length > 40) {
+    throw new RequestError(400, 'Name must be between 1 and 40 characters.');
+  }
+  if (
+    email.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ) {
+    throw new RequestError(400, 'Enter a valid email address.');
+  }
+  if (password.length < 10 || password.length > 128) {
+    throw new RequestError(400, 'Password must be between 10 and 128 characters.');
+  }
+
+  return { name, email, password };
+}
+
+function validateLogin(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new RequestError(400, 'Login data must be an object.');
+  }
+  const email = typeof value.email === 'string' ? value.email.trim().toLowerCase() : '';
+  const password = typeof value.password === 'string' ? value.password : '';
+  if (!email || email.length > 254 || !password || password.length > 128) {
+    throw new RequestError(400, 'Enter your email and password.');
+  }
+  return { email, password };
+}
+
+function validateComment(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new RequestError(400, 'Comment data must be an object.');
+  }
+  const body = typeof value.body === 'string' ? value.body.trim() : '';
+  if (!body || body.length > 2000) {
+    throw new RequestError(400, 'Comment must be between 1 and 2000 characters.');
+  }
+  return body;
 }
 
 function validateCollection(value, database) {
@@ -217,10 +274,75 @@ async function searchInspiration(query, fetchImplementation) {
     .map(mapInspirationMeal);
 }
 
-async function routeRequest(request, response, database, fetchImplementation) {
+async function routeRequest(request, response, database, fetchImplementation, secureCookies) {
   const url = new URL(request.url, 'http://localhost');
   if (request.method === 'GET' && url.pathname === '/api/health') {
     sendJson(response, 200, { status: 'ok' });
+    return;
+  }
+  if (url.pathname === '/api/auth/me' && request.method === 'GET') {
+    response.setHeader('Cache-Control', 'no-store');
+    sendJson(response, 200, { user: getSessionUser(request, database) });
+    return;
+  }
+  if (url.pathname === '/api/auth/register' && request.method === 'POST') {
+    const registration = validateRegistration(await readJson(request));
+    if (database.prepare('SELECT id FROM users WHERE email = ?').get(registration.email)) {
+      throw new RequestError(409, 'An account with this email already exists.');
+    }
+
+    const passwordHash = await hashPassword(registration.password);
+    let userId;
+    let token;
+    try {
+      inTransaction(database, () => {
+        const result = database
+          .prepare('INSERT INTO users (display_name, email, password_hash, created_at) VALUES (?, ?, ?, ?)')
+          .run(registration.name, registration.email, passwordHash, new Date().toISOString());
+        userId = Number(result.lastInsertRowid);
+        token = createSession(database, userId);
+      });
+    } catch (error) {
+      if (error.code === 'ERR_SQLITE_CONSTRAINT_UNIQUE') {
+        throw new RequestError(409, 'An account with this email already exists.');
+      }
+      throw error;
+    }
+
+    response.setHeader('Cache-Control', 'no-store');
+    setSessionCookie(response, token, secureCookies);
+    sendJson(response, 201, {
+      user: { id: userId, name: registration.name, email: registration.email },
+    });
+    return;
+  }
+  if (url.pathname === '/api/auth/login' && request.method === 'POST') {
+    const credentials = validateLogin(await readJson(request));
+    const account = database
+      .prepare('SELECT id, display_name AS name, email, password_hash FROM users WHERE email = ?')
+      .get(credentials.email);
+    if (!account) {
+      await hashPassword(credentials.password);
+      throw new RequestError(401, 'Email or password is incorrect.');
+    }
+    if (!(await verifyPassword(credentials.password, account.password_hash))) {
+      throw new RequestError(401, 'Email or password is incorrect.');
+    }
+
+    const token = createSession(database, account.id);
+    response.setHeader('Cache-Control', 'no-store');
+    setSessionCookie(response, token, secureCookies);
+    sendJson(response, 200, {
+      user: { id: account.id, name: account.name, email: account.email },
+    });
+    return;
+  }
+  if (url.pathname === '/api/auth/logout' && request.method === 'POST') {
+    destroySession(request, database);
+    clearSessionCookie(response, secureCookies);
+    response.setHeader('Cache-Control', 'no-store');
+    response.writeHead(204);
+    response.end();
     return;
   }
   if (request.method === 'GET' && url.pathname === '/api/inspiration') {
@@ -237,6 +359,48 @@ async function routeRequest(request, response, database, fetchImplementation) {
   }
   if (request.method === 'GET' && url.pathname === '/api/collections') {
     sendJson(response, 200, getCollections(database));
+    return;
+  }
+  const commentsMatch = url.pathname.match(/^\/api\/recipes\/(\d+)\/comments$/);
+  if (commentsMatch && ['GET', 'POST'].includes(request.method)) {
+    const recipeId = Number(commentsMatch[1]);
+    if (!Number.isSafeInteger(recipeId) || recipeId < 1) {
+      throw new RequestError(400, 'Recipe id is invalid.');
+    }
+    if (!database.prepare('SELECT id FROM recipes WHERE id = ?').get(recipeId)) {
+      throw new RequestError(404, 'Recipe was not found.');
+    }
+
+    if (request.method === 'GET') {
+      const comments = database
+        .prepare(`
+          SELECT comments.id, comments.body, comments.created_at AS createdAt,
+            users.display_name AS author
+          FROM comments
+          JOIN users ON users.id = comments.user_id
+          WHERE comments.recipe_id = ?
+          ORDER BY comments.id DESC
+        `)
+        .all(recipeId);
+      sendJson(response, 200, comments);
+      return;
+    }
+
+    const user = getSessionUser(request, database);
+    if (!user) {
+      throw new RequestError(401, 'Sign in to share your experience.');
+    }
+    const body = validateComment(await readJson(request));
+    const createdAt = new Date().toISOString();
+    const result = database
+      .prepare('INSERT INTO comments (recipe_id, user_id, body, created_at) VALUES (?, ?, ?, ?)')
+      .run(recipeId, user.id, body, createdAt);
+    sendJson(response, 201, {
+      id: Number(result.lastInsertRowid),
+      body,
+      createdAt,
+      author: user.name,
+    });
     return;
   }
   if (request.method === 'POST' && url.pathname === '/api/collections') {
@@ -352,9 +516,13 @@ async function routeRequest(request, response, database, fetchImplementation) {
   sendJson(response, 404, { error: 'API route was not found.' });
 }
 
-function createApiServer(database, fetchImplementation = fetch) {
+function createApiServer(
+  database,
+  fetchImplementation = fetch,
+  { secureCookies = process.env.COOKIE_SECURE === 'true' } = {},
+) {
   return createServer((request, response) => {
-    routeRequest(request, response, database, fetchImplementation).catch((error) => {
+    routeRequest(request, response, database, fetchImplementation, secureCookies).catch((error) => {
       if (error instanceof RequestError) {
         sendJson(response, error.status, { error: error.message });
         return;
