@@ -2,10 +2,12 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { RecipeCollection, RecipeCollectionDraft } from '../models/collection.model';
+import { InspirationRecipe } from '../models/inspiration.model';
 import { Recipe, RecipeDraft } from '../models/recipe.model';
 
 const API_URL = '/api/recipes';
 const COLLECTIONS_API_URL = '/api/collections';
+const INSPIRATION_API_URL = '/api/inspiration';
 
 @Injectable({ providedIn: 'root' })
 export class RecipeService {
@@ -111,6 +113,10 @@ export class RecipeService {
         this.mutationError.set(null);
       }),
     );
+  }
+
+  searchInspiration(query: string): Observable<InspirationRecipe[]> {
+    return this.http.get<InspirationRecipe[]>(INSPIRATION_API_URL, { params: { q: query } });
   }
 
   read(id: number): Recipe | undefined {

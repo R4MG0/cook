@@ -4,10 +4,11 @@ import { RecipeCollection, RecipeCollectionDraft } from './models/collection.mod
 import { RecipeService } from './services/recipe.service';
 import { RecipeForm } from './components/recipe-form/recipe-form';
 import { CookPage } from './components/cook-page/cook-page';
+import { InspirationSearch } from './components/inspiration-search/inspiration-search';
 
 @Component({
   selector: 'app-root',
-  imports: [RecipeForm, CookPage],
+  imports: [RecipeForm, CookPage, InspirationSearch],
   template: `
     @if (cookingRecipe(); as recipe) {
       <app-cook-page [recipe]="recipe" (closed)="closeCooking()" />
@@ -27,6 +28,8 @@ import { CookPage } from './components/cook-page/cook-page';
           <div><p class="eyebrow">What are we cooking today?</p><h1>Find your next <em>favorite recipe</em></h1></div>
           <div class="search-wrap"><label class="sr-only" for="recipe-search">Search recipes</label><input id="recipe-search" type="search" placeholder="Search recipes, ingredients..." [value]="query()" (input)="onSearch($event)" /></div>
         </section>
+
+        <app-inspiration-search />
 
         <section class="collections-section" id="collections">
           <div class="section-heading">
@@ -148,7 +151,41 @@ import { CookPage } from './components/cook-page/cook-page';
               <div class="detail-body">
                 <p class="recipe-category">{{ recipe.category }}</p>
                 <h3>{{ recipe.title }}</h3>
-                <div class="recipe-meta"><span>{{ recipe.time }} min</span><span>★ {{ recipe.rating }}</span></div>
+                <div class="recipe-meta"><span>{{ recipe.time }} min</span></div>
+                <div class="rating-control" role="group" [attr.aria-label]="'Rate ' + recipe.title">
+                  <span class="rating-label">Your rating</span>
+                  <span class="star-buttons">
+                    @for (star of [1, 2, 3, 4, 5]; track star) {
+                      <span class="star-pair">
+                        <button
+                          class="star-half star-half-left"
+                          type="button"
+                          [class.active]="recipe.rating >= star - 0.5"
+                          [attr.aria-label]="'Rate ' + (star - 0.5) + ' stars'"
+                          [attr.aria-pressed]="recipe.rating === star - 0.5"
+                          [disabled]="ratingSaving()"
+                          (click)="setRating(recipe, star - 0.5)"
+                        ><span class="star-glyph" aria-hidden="true">★</span></button>
+                        <button
+                          class="star-half star-half-right"
+                          type="button"
+                          [class.active]="recipe.rating >= star"
+                          [attr.aria-label]="'Rate ' + star + ' stars'"
+                          [attr.aria-pressed]="recipe.rating === star"
+                          [disabled]="ratingSaving()"
+                          (click)="setRating(recipe, star)"
+                        ><span class="star-glyph" aria-hidden="true">★</span></button>
+                      </span>
+                    }
+                  </span>
+                  <span class="rating-value">{{ recipe.rating }} / 5</span>
+                </div>
+                @if (ratingSaving()) {
+                  <p class="rating-status" role="status">Saving rating...</p>
+                }
+                @if (ratingError(); as error) {
+                  <p class="rating-error" role="alert">{{ error }}</p>
+                }
                 <section class="recipe-steps" aria-labelledby="recipe-steps-title">
                   <h4 id="recipe-steps-title">Method</h4>
                   <ol>@for (step of recipe.steps; track $index; let index = $index) {<li><span class="recipe-step-number">{{ index + 1 }}.</span><span>{{ step }}</span></li>}</ol>
@@ -190,6 +227,8 @@ export class App {
   protected readonly cookingRecipe = signal<Recipe | null>(null);
   protected readonly editingRecipe = signal<Recipe | null>(null);
   protected readonly selectedRecipe = signal<Recipe | null>(null);
+  protected readonly ratingSaving = signal(false);
+  protected readonly ratingError = signal<string | null>(null);
   protected readonly selectedCollectionId = signal<number | null>(null);
   protected readonly collectionFormOpen = signal(false);
   protected readonly editingCollection = signal<RecipeCollection | null>(null);
@@ -334,7 +373,38 @@ export class App {
       });
     }
   }
-  protected viewRecipe(recipe: Recipe): void { this.selectedRecipe.set(recipe); }
+  protected viewRecipe(recipe: Recipe): void {
+    this.ratingError.set(null);
+    this.selectedRecipe.set(recipe);
+  }
+  protected setRating(recipe: Recipe, rating: number): void {
+    if (this.ratingSaving() || recipe.rating === rating) {
+      return;
+    }
+
+    this.ratingSaving.set(true);
+    this.ratingError.set(null);
+    const draft: RecipeDraft = {
+      title: recipe.title,
+      category: recipe.category,
+      time: recipe.time,
+      rating,
+      steps: recipe.steps,
+      image: recipe.image,
+    };
+    this.recipeService.update(recipe.id, draft).subscribe({
+      next: (updatedRecipe) => {
+        if (this.selectedRecipe()?.id === updatedRecipe.id) {
+          this.selectedRecipe.set(updatedRecipe);
+        }
+        this.ratingSaving.set(false);
+      },
+      error: () => {
+        this.ratingSaving.set(false);
+        this.ratingError.set('Could not save your rating. Please try again.');
+      },
+    });
+  }
   protected closeDetail(): void { this.selectedRecipe.set(null); }
   protected openEditFromDetail(recipe: Recipe): void { this.closeDetail(); this.editingRecipe.set(recipe); this.formOpen.set(true); }
   protected deleteFromDetail(recipe: Recipe): void { this.deleteRecipe(recipe); this.closeDetail(); }

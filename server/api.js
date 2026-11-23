@@ -154,10 +154,81 @@ function getRecipes(database) {
     .map(toRecipe);
 }
 
-async function routeRequest(request, response, database) {
+function mapInspirationMeal(meal) {
+  const ingredients = [];
+  for (let index = 1; index <= 20; index += 1) {
+    const name =
+      typeof meal[`strIngredient${index}`] === 'string'
+        ? meal[`strIngredient${index}`].trim()
+        : '';
+    if (name) {
+      ingredients.push({
+        name,
+        measure:
+          typeof meal[`strMeasure${index}`] === 'string'
+            ? meal[`strMeasure${index}`].trim()
+            : '',
+      });
+    }
+  }
+
+  return {
+    id: meal.idMeal,
+    name: meal.strMeal,
+    category: meal.strCategory ?? '',
+    area: meal.strArea ?? '',
+    image: meal.strMealThumb ?? '',
+    source: meal.strSource ?? '',
+    instructions: meal.strInstructions ?? '',
+    ingredients,
+  };
+}
+
+async function searchInspiration(query, fetchImplementation) {
+  const searchUrl = new URL('https://www.themealdb.com/api/json/v1/1/search.php');
+  searchUrl.searchParams.set('s', query);
+
+  let response;
+  try {
+    response = await fetchImplementation(searchUrl, { signal: AbortSignal.timeout(8000) });
+  } catch {
+    throw new RequestError(502, 'The recipe inspiration service is unavailable.');
+  }
+  if (!response.ok) {
+    throw new RequestError(502, 'The recipe inspiration service is unavailable.');
+  }
+
+  let result;
+  try {
+    result = await response.json();
+  } catch {
+    throw new RequestError(502, 'The recipe inspiration service returned an invalid response.');
+  }
+  if (
+    !result ||
+    typeof result !== 'object' ||
+    (!Array.isArray(result.meals) && result.meals !== null)
+  ) {
+    throw new RequestError(502, 'The recipe inspiration service returned an invalid response.');
+  }
+
+  return (result.meals ?? [])
+    .filter((meal) => meal && typeof meal.idMeal === 'string' && typeof meal.strMeal === 'string')
+    .map(mapInspirationMeal);
+}
+
+async function routeRequest(request, response, database, fetchImplementation) {
   const url = new URL(request.url, 'http://localhost');
   if (request.method === 'GET' && url.pathname === '/api/health') {
     sendJson(response, 200, { status: 'ok' });
+    return;
+  }
+  if (request.method === 'GET' && url.pathname === '/api/inspiration') {
+    const query = url.searchParams.get('q')?.trim() ?? '';
+    if (!query || query.length > 80) {
+      throw new RequestError(400, 'Search query must be between 1 and 80 characters.');
+    }
+    sendJson(response, 200, await searchInspiration(query, fetchImplementation));
     return;
   }
   if (request.method === 'GET' && url.pathname === '/api/recipes') {
@@ -281,9 +352,9 @@ async function routeRequest(request, response, database) {
   sendJson(response, 404, { error: 'API route was not found.' });
 }
 
-function createApiServer(database) {
+function createApiServer(database, fetchImplementation = fetch) {
   return createServer((request, response) => {
-    routeRequest(request, response, database).catch((error) => {
+    routeRequest(request, response, database, fetchImplementation).catch((error) => {
       if (error instanceof RequestError) {
         sendJson(response, error.status, { error: error.message });
         return;

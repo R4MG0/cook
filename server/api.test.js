@@ -6,9 +6,9 @@ const { test } = require('node:test');
 const { createApiServer } = require('./api');
 const { createDatabase } = require('./database');
 
-async function withApi(run, databasePath = ':memory:') {
+async function withApi(run, databasePath = ':memory:', fetchImplementation = fetch) {
   const database = createDatabase(databasePath);
-  const server = createApiServer(database);
+  const server = createApiServer(database, fetchImplementation);
   await new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(0, '127.0.0.1', resolve);
@@ -75,6 +75,69 @@ test('recipe API rejects invalid recipe data', async () => {
     });
     assert.equal(response.status, 400);
     assert.match((await response.json()).error, /non-empty recipe step/);
+  });
+});
+
+test('recipe inspiration searches TheMealDB and returns compact recipe results', async () => {
+  const meal = {
+    idMeal: '52772',
+    strMeal: 'Teriyaki Chicken Casserole',
+    strCategory: 'Chicken',
+    strArea: 'Japanese',
+    strMealThumb: 'https://example.com/meal.jpg',
+    strSource: 'https://example.com/recipe',
+    strInstructions: 'Bake until golden.',
+    strIngredient1: 'Chicken',
+    strMeasure1: '2 cups',
+    strIngredient2: ' ',
+  };
+  let requestedUrl;
+  const fetchImplementation = async (url) => {
+    requestedUrl = url;
+    return { ok: true, json: async () => ({ meals: [meal] }) };
+  };
+
+  await withApi(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/inspiration?q=chicken%20casserole`);
+    const results = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(requestedUrl.hostname, 'www.themealdb.com');
+    assert.equal(requestedUrl.searchParams.get('s'), 'chicken casserole');
+    assert.deepEqual(results, [{
+      id: '52772',
+      name: 'Teriyaki Chicken Casserole',
+      category: 'Chicken',
+      area: 'Japanese',
+      image: 'https://example.com/meal.jpg',
+      source: 'https://example.com/recipe',
+      instructions: 'Bake until golden.',
+      ingredients: [{ name: 'Chicken', measure: '2 cups' }],
+    }]);
+  }, ':memory:', fetchImplementation);
+});
+
+test('recipe inspiration validates queries and reports upstream failures', async () => {
+  await withApi(async (baseUrl) => {
+    const missingQuery = await fetch(`${baseUrl}/api/inspiration?q=%20`);
+    assert.equal(missingQuery.status, 400);
+
+    const tooLongQuery = await fetch(`${baseUrl}/api/inspiration?q=${'a'.repeat(81)}`);
+    assert.equal(tooLongQuery.status, 400);
+  });
+
+  await withApi(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/inspiration?q=unknown`);
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), []);
+  }, ':memory:', async () => ({ ok: true, json: async () => ({ meals: null }) }));
+
+  await withApi(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/inspiration?q=pasta`);
+    assert.equal(response.status, 502);
+    assert.match((await response.json()).error, /inspiration service/);
+  }, ':memory:', async () => {
+    throw new Error('network failure');
   });
 });
 

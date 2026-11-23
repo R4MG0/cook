@@ -1,0 +1,81 @@
+<section class="inspiration-section" aria-labelledby="inspiration-title">
+  <div class="inspiration-heading">
+    <div>
+      <p class="eyebrow">From the free recipe catalog</p>
+      <h2 id="inspiration-title">Need a little inspiration?</h2>
+    </div>
+    <form class="inspiration-search" (submit)="$event.preventDefault(); search()">
+      <label class="sr-only" for="inspiration-query">Search recipe inspiration</label>
+      <input
+        id="inspiration-query"
+        type="search"
+        [value]="query()"
+        (input)="onQuery($event)"
+        placeholder="Try chicken, pasta, or curry"
+        maxlength="80"
+        required
+      />
+      <button type="submit" [disabled]="loading()">
+        {{ loading() ? 'Searching...' : 'Find recipes' }}
+      </button>
+    </form>
+  </div>
+
+  @if (error(); as message) {
+    <p class="inspiration-message error-message" role="alert">{{ message }}</p>
+  } @else if (loading()) {
+    <p class="inspiration-message" role="status">Looking for recipe ideas...</p>
+  } @else if (searched() && results().length === 0) {
+    <p class="inspiration-message">No matches found. Try another ingredient or recipe name.</p>
+  }
+
+  @if (addError(); as message) {
+    <p class="inspiration-message error-message" role="alert">{{ message }}</p>
+  }
+
+  @if (results().length > 0) {
+    <div class="inspiration-grid">
+      @for (recipe of results(); track recipe.id) {
+        <article class="inspiration-card">
+          <img [src]="recipe.image" [alt]="recipe.name" loading="lazy" />
+          <div class="inspiration-card-body">
+            <p class="recipe-meta">{{ recipe.category }}@if (recipe.area) { · {{ recipe.area }}}</p>
+            <h3>{{ recipe.name }}</h3>
+            <details>
+              <summary>Ingredients and method</summary>
+              <h4>Ingredients</h4>
+              <ul>
+                @for (ingredient of recipe.ingredients; track $index) {
+                  <li>{{ ingredient.measure }} {{ ingredient.name }}</li>
+                } @empty {
+                  <li>Ingredient details are unavailable.</li>
+                }
+              </ul>
+              <h4>Method</h4>
+              <p class="recipe-instructions">{{ recipe.instructions || 'Instructions are unavailable.' }}</p>
+            </details>
+            @if (recipe.source) {
+              <a class="source-link" [href]="recipe.source" target="_blank" rel="noopener noreferrer">
+                View original recipe
+              </a>
+            }
+            <button
+              class="add-recipe-button"
+              type="button"
+              [disabled]="addingRecipeId() !== null || isInMyRecipes(recipe)"
+              (click)="addRecipe(recipe)"
+            >
+              @if (isInMyRecipes(recipe)) {
+                Added to my recipes
+              } @else if (addingRecipeId() === recipe.id) {
+                Adding...
+              } @else {
+                Add to my recipes
+              }
+            </button>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>

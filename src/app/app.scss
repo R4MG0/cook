@@ -10,6 +10,95 @@
   font: 700 28px/1.15 Georgia, serif;
 }
 
+.rating-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.rating-label {
+  color: #5f6457;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.star-buttons {
+  display: inline-flex;
+}
+
+.star-pair {
+  position: relative;
+  display: inline-block;
+  width: 26px;
+  height: 30px;
+}
+
+.star-buttons .star-half {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #c9cabb;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.star-buttons .star-half-left {
+  left: 0;
+}
+
+.star-buttons .star-half-right {
+  right: 0;
+}
+
+.star-glyph {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.star-half-right .star-glyph {
+  left: -13px;
+}
+
+.star-buttons .star-half.active {
+  color: #c59b35;
+}
+
+.star-buttons .star-half:disabled {
+  cursor: wait;
+}
+
+.star-buttons .star-half:focus-visible {
+  outline: 2px solid #79864e;
+  outline-offset: 2px;
+}
+
+.rating-value {
+  color: #777b70;
+  font-size: 12px;
+}
+
+.rating-status,
+.rating-error {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.rating-status {
+  color: #777b70;
+}
+
+.rating-error {
+  color: #9a4b43;
+}
+
 .recipe-card-open:focus-visible {
   outline: 3px solid #3d4a31;
   outline-offset: -3px;

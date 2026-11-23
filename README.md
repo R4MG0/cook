@@ -17,6 +17,8 @@ Open `http://localhost:4200/`. Recipe and collection data is stored in `data/rec
 
 To run the API by itself, use `npm run server`. The API listens on `http://127.0.0.1:3000/`; Angular proxies `/api` requests to it during development.
 
+Search TheMealDB's free recipe catalog through `GET /api/inspiration?q=chicken`. The endpoint accepts search terms up to 80 characters and returns matching recipes with ingredients, instructions, and source links. It does not require an API key.
+
 ## Code scaffolding
 
 Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
