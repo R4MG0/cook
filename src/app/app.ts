@@ -7,12 +7,13 @@ import { CookPage } from './components/cook-page/cook-page';
 import { InspirationSearch } from './components/inspiration-search/inspiration-search';
 import { AuthDialog } from './components/auth-dialog/auth-dialog';
 import { RecipeComments } from './components/recipe-comments/recipe-comments';
+import { ChatBot } from './components/chat-bot/chat-bot';
 import { AuthService } from './services/auth.service';
 import { AuthCompletion } from './models/auth.model';
 
 @Component({
   selector: 'app-root',
-  imports: [RecipeForm, CookPage, InspirationSearch, AuthDialog, RecipeComments],
+  imports: [RecipeForm, CookPage, InspirationSearch, AuthDialog, RecipeComments, ChatBot],
   template: `
     @if (cookingRecipe(); as recipe) {
       <app-cook-page [recipe]="recipe" (closed)="closeCooking()" />
@@ -226,6 +227,7 @@ import { AuthCompletion } from './models/auth.model';
       </main>
       </div>
     }
+    <app-chat-bot />
   `,
   styles: [`
     :host{--ink:#252820;--cream:#f7f5ef;--lime:#b8ca78;--dark:#3d4a31;display:block}*{box-sizing:border-box}.app-shell{min-height:100vh;background:var(--cream);color:var(--ink)}

@@ -1,0 +1,59 @@
+<aside class="chatbot" aria-label="Recipe assistant">
+  @if (open()) {
+    <section class="chat-panel" role="dialog" aria-label="Recipe assistant chat">
+      <header class="chat-header">
+        <div>
+          <span class="chat-avatar" aria-hidden="true">C</span>
+          <div>
+            <strong>Cook assistant</strong>
+            <span class="chat-status"><span aria-hidden="true"></span> Ready to help</span>
+          </div>
+        </div>
+        <button class="chat-close" type="button" aria-label="Close chat" (click)="close()">×</button>
+      </header>
+
+      <div class="chat-messages" aria-live="polite">
+        @for (message of messages(); track message.id) {
+          <div class="message" [class.user-message]="message.sender === 'user'">
+            {{ message.text }}
+          </div>
+        }
+      </div>
+
+      <div class="quick-replies" aria-label="Suggested questions">
+        <button type="button" (click)="sendSuggested('Suggest a quick dinner')">Quick dinner</button>
+        <button type="button" (click)="sendSuggested('Vegetarian ideas')">Vegetarian</button>
+      </div>
+
+      <form class="chat-form" (submit)="send($event)">
+        <label class="sr-only" for="chat-message">Message the cooking assistant</label>
+        <input
+          id="chat-message"
+          type="text"
+          maxlength="300"
+          autocomplete="off"
+          placeholder="Ask for a recipe idea…"
+          [value]="draft()"
+          (input)="updateDraft($event)"
+          (keydown)="sendOnEnter($event)"
+        />
+        <button type="submit" [disabled]="!canSend()" aria-label="Send message">➤</button>
+      </form>
+    </section>
+  }
+
+  <button
+    class="chat-launcher"
+    type="button"
+    [attr.aria-expanded]="open()"
+    [attr.aria-label]="open() ? 'Close recipe assistant' : 'Open recipe assistant'"
+    (click)="toggle()"
+  >
+    @if (open()) {
+      <span aria-hidden="true">×</span>
+    } @else {
+      <span class="launcher-icon" aria-hidden="true">●</span>
+      <span>Chat</span>
+    }
+  </button>
+</aside>
