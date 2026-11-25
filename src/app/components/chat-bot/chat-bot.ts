@@ -1,9 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, ElementRef, inject, signal } from '@angular/core';
+import { RecipeService } from '../../services/recipe.service';
+import { Recipe } from '../../models/recipe.model';
 
 interface ChatMessage {
   id: number;
   sender: 'bot' | 'user';
   text: string;
+  time: string;
 }
 
 @Component({
@@ -13,15 +16,19 @@ interface ChatMessage {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChatBot {
+  private readonly recipeService = inject(RecipeService);
+  private readonly elementRef = inject(ElementRef);
   protected readonly open = signal(false);
   protected readonly draft = signal('');
+  protected readonly typing = signal(false);
   protected readonly canSend = computed(() => this.draft().trim().length > 0);
   private nextMessageId = 2;
   protected readonly messages = signal<ChatMessage[]>([
     {
       id: 1,
       sender: 'bot',
-      text: 'Hi! I can help you find a recipe or plan what to cook.',
+      text: 'Hi! I know the recipes in your kitchen. Ask me for a meal, category, or time limit.',
+      time: this.currentTime(),
     },
   ]);
 
@@ -53,43 +60,110 @@ export class ChatBot {
     }
   }
 
+  protected clearChat(): void {
+    this.messages.set([
+      {
+        id: 1,
+        sender: 'bot',
+        text: 'Chat cleared. What would you like to cook?',
+        time: this.currentTime(),
+      },
+    ]);
+    this.nextMessageId = 2;
+  }
+
   private submitText(text: string): void {
-    if (!text) {
+    if (!text || this.typing()) {
       return;
     }
 
     this.messages.update((messages) => [
       ...messages,
-      { id: this.nextMessageId++, sender: 'user', text },
-      { id: this.nextMessageId++, sender: 'bot', text: this.createReply(text) },
+      { id: this.nextMessageId++, sender: 'user', text, time: this.currentTime() },
     ]);
     this.draft.set('');
+    this.typing.set(true);
+    this.scrollToLatest();
+
+    window.setTimeout(() => {
+      this.messages.update((messages) => [
+        ...messages,
+        { id: this.nextMessageId++, sender: 'bot', text: this.createReply(text), time: this.currentTime() },
+      ]);
+      this.typing.set(false);
+      this.scrollToLatest();
+    }, 550);
   }
 
   private createReply(text: string): string {
     const message = text.toLowerCase();
+    const recipes = this.recipeService.recipes();
 
-    if (message.includes('quick') || message.includes('fast') || message.includes('minute')) {
-      return 'Try a 20-minute pasta, a quick vegetable stir-fry, or an avocado breakfast toast. Use the search above to narrow by ingredients.';
+    if (recipes.length === 0) {
+      return 'I’m waiting for your recipe collection to load. Try again in a moment.';
     }
-    if (message.includes('breakfast')) {
-      return 'For breakfast, look for oats, eggs, pancakes, or a fresh smoothie in the Breakfast category.';
+
+    const categories = ['breakfast', 'lunch', 'dinner', 'dessert'];
+    const requestedCategory = categories.find((category) => message.includes(category));
+    if (requestedCategory) {
+      const matches = recipes.filter((recipe) =>
+        recipe.category.toLowerCase() === requestedCategory,
+      );
+      if (matches.length > 0) {
+        return this.formatMatches(requestedCategory, matches);
+      }
     }
-    if (message.includes('lunch')) {
-      return 'A grain bowl, soup, or crisp salad is a great lunch. Try the Lunch category for a few ideas.';
+
+    const quickMatch = /(quick|fast|15|min|20|min)/.test(message);
+    if (quickMatch) {
+      const matches = recipes.filter((recipe) => recipe.time <= 30);
+      if (matches.length > 0) {
+        return `Here are some quick picks (30 minutes or less):${this.formatRecipeNames(matches)}`;
+      }
     }
-    if (message.includes('dinner')) {
-      return 'For dinner, consider pasta, curry, or sheet-pan vegetables. Open the Dinner category to explore.';
+
+    const topMatch = /(top|best|highest|popular|rating)/.test(message);
+    if (topMatch) {
+      const matches = [...recipes].sort((a, b) => b.rating - a.rating).slice(0, 3);
+      return `Your highest-rated picks:${this.formatRecipeNames(matches)}`;
     }
-    if (message.includes('dessert') || message.includes('sweet')) {
-      return 'Something sweet sounds good! Browse the Dessert category for cakes, fruit treats, and more.';
+
+    const exactMatches = recipes.filter((recipe) => {
+      const searchable = `${recipe.title} ${recipe.category} ${recipe.steps.join(' ')}`.toLowerCase();
+      return message.split(/\s+/).some((word) => word.length > 3 && searchable.includes(word));
+    });
+    if (exactMatches.length > 0) {
+      return `I found these recipe matches:${this.formatRecipeNames(exactMatches.slice(0, 3))}`;
     }
-    if (message.includes('vegetarian') || message.includes('vegan')) {
-      return 'Use the recipe search for ingredients like tofu, beans, lentils, or vegetables to find a plant-friendly option.';
+
+    if (/hello|^hi\b|hey/.test(message)) {
+      return 'Hello! Ask me for “quick dinner”, “dessert”, “top rated”, or an ingredient you have.';
     }
-    if (message.includes('hello') || message.includes('hi') || message.includes('hey')) {
-      return 'Hello! What are you in the mood to cook today?';
-    }
-    return 'I can help with breakfast, lunch, dinner, desserts, vegetarian ideas, or quick meals. What would you like to cook?';
+
+    return `Try asking for a category, a time limit, or an ingredient. For example: “quick dinner with chicken” or “something sweet.”`;
+  }
+
+  private formatMatches(category: string, matches: Recipe[]): string {
+    const title = category.charAt(0).toUpperCase() + category.slice(1);
+    return `${title} ideas from your collection:${this.formatRecipeNames(matches)}`;
+  }
+
+  private formatRecipeNames(recipes: Recipe[]): string {
+    return recipes.slice(0, 3).map((recipe) =>
+      `\n• ${recipe.title} — ${recipe.time} min · ★ ${recipe.rating}`,
+    ).join('');
+  }
+
+  private currentTime(): string {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private scrollToLatest(): void {
+    window.setTimeout(() => {
+      const messages = this.elementRef.nativeElement.querySelector('.chat-messages') as HTMLElement | null;
+      if (messages) {
+        messages.scrollTo({ top: messages.scrollHeight, behavior: 'smooth' });
+      }
+    });
   }
 }

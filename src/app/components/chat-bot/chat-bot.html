@@ -9,20 +9,31 @@
             <span class="chat-status"><span aria-hidden="true"></span> Ready to help</span>
           </div>
         </div>
-        <button class="chat-close" type="button" aria-label="Close chat" (click)="close()">×</button>
+
+        <div class="chat-actions">
+          <button class="chat-clear" type="button" aria-label="Clear chat history" title="Clear chat" (click)="clearChat()">↺</button>
+          <button class="chat-close" type="button" aria-label="Close chat" (click)="close()">×</button>
+        </div>
       </header>
 
       <div class="chat-messages" aria-live="polite">
         @for (message of messages(); track message.id) {
           <div class="message" [class.user-message]="message.sender === 'user'">
-            {{ message.text }}
+            <span class="message-text">{{ message.text }}</span>
+            <time>{{ message.time }}</time>
+          </div>
+        }
+        @if (typing()) {
+          <div class="message typing-indicator" aria-label="Cook assistant is typing">
+            <span></span><span></span><span></span>
           </div>
         }
       </div>
 
       <div class="quick-replies" aria-label="Suggested questions">
-        <button type="button" (click)="sendSuggested('Suggest a quick dinner')">Quick dinner</button>
-        <button type="button" (click)="sendSuggested('Vegetarian ideas')">Vegetarian</button>
+        <button type="button" (click)="sendSuggested('Quick dinner ideas')">⚡ Quick dinner</button>
+        <button type="button" (click)="sendSuggested('Vegetarian dinner')">🥬 Vegetarian</button>
+        <button type="button" (click)="sendSuggested('Show top rated recipes')">★ Top rated</button>
       </div>
 
       <form class="chat-form" (submit)="send($event)">
